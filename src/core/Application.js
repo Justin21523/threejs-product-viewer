@@ -15,20 +15,26 @@ export default class Application {
 
     // 3. 建立 SceneManager，負責 Scene 與 Light 初始化
     this.sceneManager = new SceneManager();
-
+    // 2. 在 Application 自行建立 camera
+    this.camera = new THREE.PerspectiveCamera(
+      45,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+    this.camera.position.set(0, 1.5, 3);
+    
     // 2. 等模型 & MaterialController 準備好之後，再 init UI
     this.sceneManager.addEventListener('modelLoaded', () => {
       // 確保 this.sceneManager.materialController 已被設定
         this.uiManager = new UIManager(this.sceneManager.materialController);
     });
     
-    // 4. 建立 CameraController，負責 Camera 與 Controls
-    //    這邊先透過 sceneManager 取得 camera
-    this.camera = this.sceneManager.camera;
-    this.controls = this.sceneManager.controls;
-    
-   // 3. 建立 CameraController，這裡要用 this.renderer
-    this.cameraController = new CameraController(this.sceneManager.camera,        this.renderer.domElement);
+    // 4. 建立 CameraController，拿我們剛剛建立的 camera
+    this.cameraController = new CameraController(
+      this.camera,
+      this.renderer.domElement
+    );
 
     // 5. 綁定 resize 事件，保持畫面比例
     window.addEventListener('resize', this.onResize.bind(this));
