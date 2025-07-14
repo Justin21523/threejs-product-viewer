@@ -4,13 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>3D Product Viewer</title>
-  <!-- Three.js -->
-  <script src="https://unpkg.com/three/build/three.min.js"></script>
-  <!-- OrbitControls -->
-  <script src="https://unpkg.com/three/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
   <canvas id="canvas"></canvas>
-  <script src="src/main.js"></script>
+  <!-- 直接載入 src/main.js，並讓它自己 import three -->
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

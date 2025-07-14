@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/examples/js/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/js/loaders/GLTFLoader.js';
 import ModelLoader from './ModelLoader.js';
 import LoaderUI from '../utils/LoaderUI.js';
+import MaterialController from './MaterialController';
 
 export default class SceneManager {
   constructor() {
@@ -29,8 +30,13 @@ export default class SceneManager {
       this.loaderUI.show();
       this.loaderUI.setProgress(p);
     });
-    this.loader.onLoad(obj => {
-      this.scene.add(obj);
+    this.loader.onLoad(gltf => {
+      const mesh = gltf.scene.children.find(obj => obj.isMesh);
+      const matCtrl = new MaterialController('standard', { color: 0xdddddd });
+      mesh.material = matCtrl.getMaterial();
+      this.scene.add(gltf.scene);
+      // 儲存 matCtrl 方便 UIManager 調用
+      this.materialController = matCtrl;
       // 確保進度條到 100% 並隱藏
       this.loaderUI.setProgress(100);
     });

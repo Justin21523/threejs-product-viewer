@@ -1,7 +1,7 @@
 // src/main.js
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/js/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/examples/js/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const canvas = document.getElementById('canvas');
 const scene = new THREE.Scene();
