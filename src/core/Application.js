@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import SceneManager from './SceneManager.js';
 import CameraController from './CameraController.js';
 import UIManager from '../utils/UIManager.js';
+import EnvMapLoader   from '../utils/EnvMapLoader.js';
+import PostProcessing from './PostProcessing.js';
 
 export default class Application {
   constructor({ canvas }) {
@@ -38,6 +40,25 @@ export default class Application {
 
     // 5. 綁定 resize 事件，保持畫面比例
     window.addEventListener('resize', this.onResize.bind(this));
+
+    //  先載入 environment map
+   this.envLoader = new EnvMapLoader(this.renderer, this.sceneManager.scene);
+   this.envLoader
+     .load('/envmaps/royal_esplanade_1k.hdr')
+     .then(() => {
+       // 2. 環境貼圖就緒後，再啟動後處理 (post-processing)
+       this.post = new PostProcessing(
+         this.renderer,
+         this.sceneManager.scene,
+         this.camera,
+         {
+           bloom: { enabled: true },
+           ssao:  { enabled: true }
+         }
+       );
+     })
+     .catch(console.error);
+    
     // 6. 啟動渲染循環
     this.animate();
   }
@@ -48,6 +69,9 @@ export default class Application {
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    if (this.post) {
+       this.post.setSize(w, h);
+     }
   }
 
   animate() {
@@ -55,7 +79,12 @@ export default class Application {
     requestAnimationFrame(this.animate.bind(this));
     // 2. 更新 Controls (enableDamping 時需呼叫)
     this.cameraController.update();
-    // 3. 進行場景渲染
-    this.renderer.render(this.sceneManager.scene, this.camera);
+  
+     // 如果有 composer，就用 composer 渲染；否則 fallback 到原生 renderer
+     if (this.post) {
+       this.post.render();
+     } else {
+       this.renderer.render(this.sceneManager.scene, this.camera);
+     }
   }
 }
