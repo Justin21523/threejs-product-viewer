@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/js/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/js/loaders/GLTFLoader.js';
 import ModelLoader from './ModelLoader.js';
+import LoaderUI from '../utils/LoaderUI.js';
 
 export default class SceneManager {
   constructor() {
@@ -18,12 +19,25 @@ export default class SceneManager {
     // 3. 設定光源 (Lighting)
     this._initLights();
 
+    //  建立 LoaderUI
+    this.loaderUI = new LoaderUI();
+    
     // 建立 ModelLoader
     this.loader = new ModelLoader();
     // 註冊事件
-    this.loader.onProgress(p => console.log(`載入進度：${p.toFixed(1)}%`));
-    this.loader.onError(err => console.error('載入錯誤：', err));
-    this.loader.onLoad(obj => this.scene.add(obj));
+    this.loader.onProgress(p => {
+      this.loaderUI.show();
+      this.loaderUI.setProgress(p);
+    });
+    this.loader.onLoad(obj => {
+      this.scene.add(obj);
+      // 確保進度條到 100% 並隱藏
+      this.loaderUI.setProgress(100);
+    });
+    this.loader.onError(err => {
+      console.error('載入錯誤：', err);
+      this.loaderUI.hide();
+    });
     // 開始載入
     this.loader.loadModel('models/product.glb');
     
