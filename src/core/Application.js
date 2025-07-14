@@ -8,7 +8,6 @@ export default class Application {
   constructor({ canvas }) {
     // 1. 儲存 HTMLCanvasElement 以供 Renderer 使用
     this.canvas = canvas;
-
     // 2. 建立 Three.js Renderer
     //    antialias: true => 反鋸齒，讓邊緣更平滑
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
@@ -16,6 +15,11 @@ export default class Application {
 
     // 3. 建立 SceneManager，負責 Scene 與 Light 初始化
     this.sceneManager = new SceneManager();
+
+    // 2. 等模型 & MaterialController 準備好之後，再 init UI
+    this.sceneManager.addEventListener('modelLoaded', () => {
+        this.uiManager = new UIManager(this.sceneManager.materialController);
+    });
 
     // 初始化 UIManager =======
     // 取出 SceneManager 裡的 MaterialController
@@ -28,12 +32,11 @@ export default class Application {
     this.camera = this.sceneManager.camera;
     this.controls = this.sceneManager.controls;
     
-    // 用 CameraController 封裝相機與控件
-    this.cameraController = new CameraController(this.camera, renderer.domElement);
+   // 3. 建立 CameraController，這裡要用 this.renderer
+    this.cameraController = new CameraController(this.sceneManager.camera,        this.renderer.domElement);
 
     // 5. 綁定 resize 事件，保持畫面比例
     window.addEventListener('resize', this.onResize.bind(this));
-
     // 6. 啟動渲染循環
     this.animate();
   }

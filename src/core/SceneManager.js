@@ -1,61 +1,21 @@
 // src/core/SceneManager.js
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/js/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/examples/js/loaders/GLTFLoader.js';
-import ModelLoader from './ModelLoader.js';
-import LoaderUI from '../utils/LoaderUI.js';
+import { EventDispatcher, Scene, AmbientLight, DirectionalLight } from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import MaterialController from './MaterialController';
 
-export default class SceneManager {
+export default class SceneManager extends EventDispatche {
   constructor() {
-    // 1. 建立場景 (Scene)
-    this.scene = new THREE.Scene();
+    super();
+    this.scene = new Scene();
+    this.scene.add(new AmbientLight(0xffffff, 0.6));
+    const dir = new DirectionalLight(0xffffff, 1);
+    dir.position.set(5,10,7.5);
+    this.scene.add(dir);
 
-    // 2. 初始化相機 (PerspectiveCamera)
-    this.camera = new THREE.PerspectiveCamera(
-      45, window.innerWidth / window.innerHeight, 0.1, 100
-    );
-    this.camera.position.set(0, 1.5, 3);
-
-    // 3. 設定光源 (Lighting)
-    this._initLights();
-
-    //  建立 LoaderUI
-    this.loaderUI = new LoaderUI();
-    
-    // 建立 ModelLoader
-    this.loader = new ModelLoader();
-    // 註冊事件
-    this.loader.onProgress(p => {
-      this.loaderUI.show();
-      this.loaderUI.setProgress(p);
-    });
-    this.loader.onLoad(gltf => {
-      const mesh = gltf.scene.children.find(obj => obj.isMesh);
-      const matCtrl = new MaterialController('standard', { color: 0xdddddd });
-      mesh.material = matCtrl.getMaterial();
-      this.scene.add(gltf.scene);
-      // 儲存 matCtrl 方便 UIManager 調用
-      this.materialController = matCtrl;
-      // 確保進度條到 100% 並隱藏
-      this.loaderUI.setProgress(100);
-    });
-    this.loader.onError(err => {
-      console.error('載入錯誤：', err);
-      this.loaderUI.hide();
-    });
-    // 開始載入
-    this.loader.loadModel('models/product.glb');
-    
-    // 4. 初始化 Controls
-    //    OrbitControls 需要 camera 與 renderer.domElement
-    this.controls = new OrbitControls(this.camera, document.body); 
-    this.controls.enableDamping = true;
-
-    // 5. 載入模型
+    // 立即呼叫載入
     this._loadModel();
   }
-
   _initLights() {
     // 環境光 (AmbientLight)：提供整場景基礎亮度
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
@@ -68,15 +28,23 @@ export default class SceneManager {
   }
 
   _loadModel() {
-    const loader = new GLTFLoader();
-    loader.load(
-      'models/product.glb',
+    new GLTFLoader().load(
+      '/models/product.glb',
       (gltf) => {
-        // 成功載入後，把 gltf.scene 加入 Three.js 場景
+        // 建立 MaterialController 並套用
+        const matCtrl = new MaterialController('standard', { color: 0xdddddd });
+        const mesh = gltf.scene.children.find(c=>c.isMesh);
+        mesh.material = matCtrl.getMaterial();
         this.scene.add(gltf.scene);
+
+        // 儲存給外部拿
+        this.materialController = matCtrl;
+
+        // 通知 Application 可以啟動 UI
+        this.dispatchEvent({ type: 'modelLoaded' });
       },
-      (xhr) => console.log(`載入 ${(xhr.loaded / xhr.total * 100).toFixed(2)}%`),
-      (err) => console.error('模型載入錯誤：', err)
+      null,
+      (err) => console.error(err)
     );
   }
 }
