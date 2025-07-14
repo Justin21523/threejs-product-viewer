@@ -26,7 +26,7 @@ scene.add(dirLight);
 
 // GLTFLoader 載入模型 (models/product.glb)
 new GLTFLoader().load(
-  'models/product.glb',
+  '/models/product.glb',
   gltf => scene.add(gltf.scene),
   xhr => console.log(`載入 ${(xhr.loaded/xhr.total*100).toFixed(2)}%`),
   err => console.error('載入失敗：', err)
