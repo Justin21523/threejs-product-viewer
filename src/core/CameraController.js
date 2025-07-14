@@ -1,5 +1,5 @@
 // src/core/CameraController.js
-import { OrbitControls } from 'three/examples/js/controls/OrbitControls.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export default class CameraController {
   /**

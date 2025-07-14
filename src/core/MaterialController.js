@@ -1,5 +1,4 @@
 // src/core/MaterialController.js
-
 import * as THREE from 'three';
 
 export default class MaterialController {
