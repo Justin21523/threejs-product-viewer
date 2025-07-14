@@ -4,7 +4,7 @@ import { EventDispatcher, Scene, AmbientLight, DirectionalLight } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import MaterialController from './MaterialController';
 
-export default class SceneManager extends EventDispatche {
+export default class SceneManager extends EventDispatcher {
   constructor() {
     super();
     this.scene = new Scene();
@@ -31,16 +31,18 @@ export default class SceneManager extends EventDispatche {
     new GLTFLoader().load(
       '/models/product.glb',
       (gltf) => {
-        // 建立 MaterialController 並套用
+        // 1. 先建立 MaterialController
         const matCtrl = new MaterialController('standard', { color: 0xdddddd });
-        const mesh = gltf.scene.children.find(c=>c.isMesh);
-        mesh.material = matCtrl.getMaterial();
-        this.scene.add(gltf.scene);
-
-        // 儲存給外部拿
         this.materialController = matCtrl;
-
-        // 通知 Application 可以啟動 UI
+        // 2. 對所有子節點做 traverse，找到是真正的 Mesh 才設材質
+        gltf.scene.traverse((child) => {
+          if (child.isMesh) {
+            child.material = matCtrl.getMaterial();
+          }
+        });
+        // 3. 加到 Scene
+        this.scene.add(gltf.scene);
+        // 4. 通知外部：模型 + 材質已就緒
         this.dispatchEvent({ type: 'modelLoaded' });
       },
       null,
