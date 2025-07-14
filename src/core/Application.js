@@ -5,6 +5,8 @@ import CameraController from './CameraController.js';
 import UIManager from '../utils/UIManager.js';
 import EnvMapLoader   from '../utils/EnvMapLoader.js';
 import PostProcessing from './PostProcessing.js';
+import StatsManager from '../utils/StatsManager.js';
+
 
 export default class Application {
   constructor({ canvas }) {
@@ -40,7 +42,9 @@ export default class Application {
       this.camera,
       this.renderer.domElement
     );
-
+    // 建立性能監控面板
+    this.statsManager = new StatsManager();
+    
     // 5. 綁定 resize 事件，保持畫面比例
     window.addEventListener('resize', this.onResize.bind(this));
 
@@ -78,12 +82,19 @@ export default class Application {
   }
 
   animate() {
-    // 1. 維持 requestAnimationFrame (最佳化動畫)
-    requestAnimationFrame(this.animate.bind(this));
+    // 一幀開始前，啟動 stats
+    this.statsManager.begin();
+
     // 2. 更新 Controls (enableDamping 時需呼叫)
     this.cameraController.update();
-  
+
     // **暫時停用後處理**，直接用 WebGLRenderer
     this.renderer.render(this.sceneManager.scene, this.camera);
+
+    // 一幀結束後，結束 stats
+    this.statsManager.end();
+    
+    // 下一幀 維持 requestAnimationFrame (最佳化動畫) 
+    requestAnimationFrame(this.animate.bind(this));
   }
 }
