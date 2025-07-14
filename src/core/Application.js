@@ -13,6 +13,9 @@ export default class Application {
     // 2. 建立 Three.js Renderer
     //    antialias: true => 反鋸齒，讓邊緣更平滑
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+    this.renderer.outputEncoding = THREE.sRGBEncoding;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
     // 3. 建立 SceneManager，負責 Scene 與 Light 初始化
@@ -80,11 +83,7 @@ export default class Application {
     // 2. 更新 Controls (enableDamping 時需呼叫)
     this.cameraController.update();
   
-     // 如果有 composer，就用 composer 渲染；否則 fallback 到原生 renderer
-     if (this.post) {
-       this.post.render();
-     } else {
-       this.renderer.render(this.sceneManager.scene, this.camera);
-     }
+    // **暫時停用後處理**，直接用 WebGLRenderer
+    this.renderer.render(this.sceneManager.scene, this.camera);
   }
 }
