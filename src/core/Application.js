@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import SceneManager from './SceneManager.js';
 import CameraController from './CameraController.js';
+import UIManager from '../utils/UIManager.js';
 
 export default class Application {
   constructor({ canvas }) {
@@ -16,6 +17,12 @@ export default class Application {
     // 3. 建立 SceneManager，負責 Scene 與 Light 初始化
     this.sceneManager = new SceneManager();
 
+    // 初始化 UIManager =======
+    // 取出 SceneManager 裡的 MaterialController
+    const matCtrl = this.sceneManager.materialController;
+    // 建立交互面板（GUI）
+    this.uiManager = new UIManager(matCtrl);
+    
     // 4. 建立 CameraController，負責 Camera 與 Controls
     //    這邊先透過 sceneManager 取得 camera
     this.camera = this.sceneManager.camera;
