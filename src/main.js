@@ -24,6 +24,13 @@ const dirLight = new THREE.DirectionalLight(0xffffff, 1);
 dirLight.position.set(5,10,7.5);
 scene.add(dirLight);
 
+// 在 GLTFLoader.load(...) 之前，先放一個 Box 測試
+const box = new THREE.Mesh(
+  new THREE.BoxGeometry(1,1,1),
+  new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+);
+scene.add(box);
+
 // GLTFLoader 載入模型 (models/product.glb)
 new GLTFLoader().load(
   '/models/product.glb',
