@@ -18,14 +18,9 @@ export default class Application {
 
     // 2. 等模型 & MaterialController 準備好之後，再 init UI
     this.sceneManager.addEventListener('modelLoaded', () => {
+      // 確保 this.sceneManager.materialController 已被設定
         this.uiManager = new UIManager(this.sceneManager.materialController);
     });
-
-    // 初始化 UIManager =======
-    // 取出 SceneManager 裡的 MaterialController
-    const matCtrl = this.sceneManager.materialController;
-    // 建立交互面板（GUI）
-    this.uiManager = new UIManager(matCtrl);
     
     // 4. 建立 CameraController，負責 Camera 與 Controls
     //    這邊先透過 sceneManager 取得 camera
