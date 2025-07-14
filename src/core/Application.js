@@ -1,6 +1,7 @@
 // src/core/Application.js
 import * as THREE from 'three';
 import SceneManager from './SceneManager.js';
+import CameraController from './CameraController.js';
 
 export default class Application {
   constructor({ canvas }) {
@@ -19,6 +20,9 @@ export default class Application {
     //    這邊先透過 sceneManager 取得 camera
     this.camera = this.sceneManager.camera;
     this.controls = this.sceneManager.controls;
+    
+    // 用 CameraController 封裝相機與控件
+    this.cameraController = new CameraController(this.camera, renderer.domElement);
 
     // 5. 綁定 resize 事件，保持畫面比例
     window.addEventListener('resize', this.onResize.bind(this));
@@ -38,10 +42,8 @@ export default class Application {
   animate() {
     // 1. 維持 requestAnimationFrame (最佳化動畫)
     requestAnimationFrame(this.animate.bind(this));
-
     // 2. 更新 Controls (enableDamping 時需呼叫)
-    this.controls.update();
-
+    this.cameraController.update();
     // 3. 進行場景渲染
     this.renderer.render(this.sceneManager.scene, this.camera);
   }
