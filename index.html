@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="3D Product Viewer Pro - Interactive 3D product showcase"
+    />
+    <title>3D Product Viewer Pro</title>
+    <link rel="stylesheet" href="src/styles/main.css" />
+  </head>
+  <body>
+    <!-- Main 3D Viewer Container -->
+    <div id="viewer-container" class="viewer-container">
+      <!-- 3D Canvas will be injected here -->
+      <canvas id="viewer-canvas" class="viewer-canvas"></canvas>
+
+      <!-- Loading Overlay -->
+      <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading 3D Model...</div>
+        <div class="loading-progress">
+          <div id="loading-bar" class="loading-bar"></div>
+        </div>
+      </div>
+
+      <!-- Error Display -->
+      <div id="error-overlay" class="error-overlay hidden">
+        <div class="error-content">
+          <h3>Loading Error</h3>
+          <p id="error-message">Failed to load 3D model</p>
+          <button id="retry-button" class="retry-button">Retry</button>
+        </div>
+      </div>
+
+      <!-- Control Panel -->
+      <div id="control-panel" class="control-panel">
+        <div class="control-section">
+          <h4>Model Controls</h4>
+          <button id="auto-rotate-toggle" class="control-button">
+            Auto Rotate
+          </button>
+          <button id="reset-camera" class="control-button">Reset View</button>
+        </div>
+
+        <div class="control-section">
+          <h4>Lighting</h4>
+          <input
+            type="range"
+            id="light-intensity"
+            class="slider"
+            min="0"
+            max="2"
+            step="0.1"
+            value="1"
+          />
+          <label for="light-intensity">Intensity</label>
+        </div>
+
+        <div class="control-section">
+          <h4>Materials</h4>
+          <select id="material-preset" class="material-selector">
+            <option value="default">Default</option>
+            <option value="metallic">Metallic</option>
+            <option value="matte">Matte</option>
+            <option value="glossy">Glossy</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Performance Stats (Development Only) -->
+      <div id="performance-stats" class="performance-stats">
+        <div>FPS: <span id="fps-counter">--</span></div>
+        <div>Memory: <span id="memory-usage">--</span>MB</div>
+        <div>Triangles: <span id="triangle-count">--</span></div>
+      </div>
+    </div>
+
+    <!-- Version Info -->
+    <div class="version-info">3D Product Viewer Pro v1.0.0</div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
