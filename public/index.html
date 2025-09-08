@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Enterprise-grade 3D product viewer built with Three.js"
+    />
+    <meta name="author" content="3D Product Viewer Pro" />
+
+    <!-- Preconnect to external domains for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- App icons and manifest -->
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#1a1a1a" />
+
+    <!-- Open Graph meta tags for social sharing -->
+    <meta property="og:title" content="3D Product Viewer Pro" />
+    <meta
+      property="og:description"
+      content="Interactive 3D product visualization with advanced features"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/assets/images/og-image.jpg" />
+
+    <!-- Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>3D Product Viewer Pro</title>
+
+    <!-- Critical CSS for preventing layout shift -->
+    <style>
+      /* Critical styles to prevent FOUC (Flash of Unstyled Content) */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        font-family:
+          'Inter',
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+      }
+
+      body {
+        background-color: #0a0a0a;
+        color: #ffffff;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      #app {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease-out;
+      }
+
+      .loading-screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        border-top: 3px solid #007acc;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .loading-text {
+        color: #ffffff;
+        font-size: 18px;
+        font-weight: 500;
+        margin-bottom: 10px;
+      }
+
+      .loading-progress {
+        color: #999999;
+        font-size: 14px;
+      }
+
+      .error-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #1a1a1a;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 40px;
+        text-align: center;
+      }
+
+      .error-screen.visible {
+        display: flex;
+      }
+
+      .error-icon {
+        font-size: 48px;
+        color: #ff4444;
+        margin-bottom: 20px;
+      }
+
+      .error-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 12px;
+      }
+
+      .error-message {
+        font-size: 16px;
+        color: #cccccc;
+        max-width: 500px;
+        line-height: 1.6;
+        margin-bottom: 30px;
+      }
+
+      .error-actions {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn-primary {
+        background-color: #007acc;
+        color: #ffffff;
+      }
+
+      .btn-primary:hover {
+        background-color: #0066aa;
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        color: #cccccc;
+        border: 1px solid #444444;
+      }
+
+      .btn-secondary:hover {
+        background-color: #333333;
+        border-color: #555555;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Main application container -->
+    <div id="app">
+      <!-- Loading screen -->
+      <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading 3D Viewer</div>
+        <div class="loading-progress" id="loadingProgress">Initializing...</div>
+      </div>
+
+      <!-- Error screen -->
+      <div class="error-screen" id="errorScreen">
+        <div class="error-icon">⚠️</div>
+        <h1 class="error-title">Something went wrong</h1>
+        <p class="error-message" id="errorMessage">
+          We encountered an error while loading the 3D viewer. This might be due
+          to an unsupported browser or WebGL issues.
+        </p>
+        <div class="error-actions">
+          <button class="btn btn-primary" onclick="window.location.reload()">
+            🔄 Retry
+          </button>
+          <a
+            href="https://get.webgl.org/"
+            class="btn btn-secondary"
+            target="_blank"
+          >
+            ℹ️ Check WebGL Support
+          </a>
+        </div>
+      </div>
+
+      <!-- 3D Viewer will be mounted here -->
+      <div id="viewer-container"></div>
+
+      <!-- UI Controls Container -->
+      <div id="ui-container"></div>
+    </div>
+
+    <!-- Main application script -->
+    <script type="module" src="/src/main.js"></script>
+
+    <!-- Fallback for browsers without module support -->
+    <script nomodule>
+      document.getElementById('errorScreen').style.display = 'flex';
+      document.getElementById('errorMessage').textContent =
+        'Your browser does not support modern JavaScript modules. Please update your browser to use this application.';
+      document.getElementById('loadingScreen').style.display = 'none';
+    </script>
+
+    <!-- Service Worker registration -->
+    <script>
+      // Register service worker for offline support (production only)
+      if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        navigator.serviceWorker.register('/sw.js').catch(console.warn);
+      }
+    </script>
+  </body>
+</html>
