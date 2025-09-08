@@ -1,76 +1,21 @@
-/* src/main.js */
 /**
  * 3D Product Viewer Pro - Main Entry Point
- *
- * This is the main entry point for the 3D Product Viewer application.
- * It handles initialization, error handling, and progressive loading.
- *
- * @author 3D Product Viewer Pro Team
- * @version 1.0.0
+ * Initializes the viewer and sets up global functionality
  */
 
-import { ProductViewer } from '@core/viewer.js';
-import { DeviceUtils } from '@utils/device-utils.js';
-import { ErrorHandler } from '@utils/error-handler.js';
-import { PerformanceMonitor } from '@utils/performance-monitor.js';
-
-// Import styles
-import '@styles/main.css';
-import '@styles/components.css';
-import '@styles/responsive.css';
+import { ProductViewer } from './core/viewer.js';
 
 /**
- * Application configuration
- */
-const APP_CONFIG = {
-  // Core settings
-  debug: __DEV__,
-  version: __APP_VERSION__,
-  buildTime: __BUILD_TIME__,
-
-  // Performance settings
-  targetFPS: 60,
-  maxMemoryMB: 500,
-
-  // Feature flags
-  features: {
-    performanceMonitoring: true,
-    autoQualityAdjustment: true,
-    touchGestures: true,
-    keyboardShortcuts: true,
-    analytics: false, // Will be enabled in production
-  },
-
-  // Default model for demo
-  defaultModel: {
-    url: '/assets/models/demo-product.glb',
-    position: [0, 0, 0],
-    scale: [1, 1, 1],
-    rotation: [0, 0, 0],
-  },
-};
-
-/**
- * Application class - manages the entire application lifecycle
+ * Main application class
  */
 class App {
   constructor() {
     this.viewer = null;
-    this.performanceMonitor = null;
-    this.errorHandler = null;
     this.isInitialized = false;
 
-    // DOM elements
-    this.loadingScreen = document.getElementById('loadingScreen');
-    this.errorScreen = document.getElementById('errorScreen');
-    this.loadingProgress = document.getElementById('loadingProgress');
-    this.errorMessage = document.getElementById('errorMessage');
-    this.viewerContainer = document.getElementById('viewer-container');
-
     // Bind methods
-    this.handleError = this.handleError.bind(this);
-    this.handleResize = this.handleResize.bind(this);
-    this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
+    this.handleViewerError = this.handleViewerError.bind(this);
+    this.handleRetryClick = this.handleRetryClick.bind(this);
   }
 
   /**
@@ -78,490 +23,317 @@ class App {
    */
   async init() {
     try {
-      this.updateLoadingProgress('Checking system compatibility...');
+      console.log('App: Starting initialization...');
 
-      // Check WebGL support
-      if (!this.checkWebGLSupport()) {
-        throw new Error('WebGL is not supported or disabled in your browser');
+      // Get container element
+      const container = document.getElementById('viewer-container');
+      if (!container) {
+        throw new Error('Viewer container not found');
       }
 
-      // Check device capabilities
-      this.updateLoadingProgress('Analyzing device capabilities...');
-      const deviceInfo = DeviceUtils.getDeviceInfo();
-      this.logDeviceInfo(deviceInfo);
-
-      // Initialize error handler
-      this.updateLoadingProgress('Setting up error handling...');
-      this.errorHandler = new ErrorHandler({
-        onError: this.handleError,
-        debug: APP_CONFIG.debug,
+      // Create viewer instance
+      this.viewer = new ProductViewer(container, {
+        // Custom configuration can be passed here
+        development: {
+          debug: true,
+          verbose: true,
+        },
       });
 
-      // Initialize performance monitor
-      if (APP_CONFIG.features.performanceMonitoring) {
-        this.updateLoadingProgress('Starting performance monitoring...');
-        this.performanceMonitor = new PerformanceMonitor({
-          targetFPS: APP_CONFIG.targetFPS,
-          maxMemoryMB: APP_CONFIG.maxMemoryMB,
-        });
-      }
-
-      // Initialize the 3D viewer
-      this.updateLoadingProgress('Initializing 3D engine...');
-      await this.initViewer();
-
-      // Set up event listeners
+      // Setup event listeners
       this.setupEventListeners();
 
-      // Load initial content
-      this.updateLoadingProgress('Loading default model...');
-      await this.loadInitialModel();
+      // Initialize viewer
+      await this.viewer.init();
 
-      // Mark as initialized
+      // Setup retry button functionality
+      this.setupRetryButton();
+
       this.isInitialized = true;
-
-      // Hide loading screen
-      this.hideLoadingScreen();
-
-      // Log successful initialization
-      this.logInitializationSuccess();
+      console.log('App: Initialization completed successfully');
     } catch (error) {
-      this.handleInitializationError(error);
+      console.error('App: Initialization failed:', error);
+      this.handleViewerError('initialization', error);
     }
   }
 
   /**
-   * Initialize the 3D viewer
-   */
-  async initViewer() {
-    const viewerOptions = {
-      container: this.viewerContainer,
-      debug: APP_CONFIG.debug,
-      features: APP_CONFIG.features,
-
-      // Performance settings based on device capability
-      performance: this.getPerformanceSettings(),
-
-      // Event callbacks
-      onLoadStart: () => this.updateLoadingProgress('Loading 3D model...'),
-      onLoadProgress: progress =>
-        this.updateLoadingProgress(`Loading: ${Math.round(progress * 100)}%`),
-      onLoadComplete: () => this.updateLoadingProgress('Finalizing...'),
-      onError: this.handleError,
-    };
-
-    this.viewer = new ProductViewer(viewerOptions);
-    await this.viewer.init();
-  }
-
-  /**
-   * Load the initial demo model
-   */
-  async loadInitialModel() {
-    if (APP_CONFIG.defaultModel.url) {
-      try {
-        await this.viewer.loadModel(APP_CONFIG.defaultModel.url, {
-          position: APP_CONFIG.defaultModel.position,
-          scale: APP_CONFIG.defaultModel.scale,
-          rotation: APP_CONFIG.defaultModel.rotation,
-        });
-      } catch (error) {
-        console.warn('Failed to load default model:', error);
-        // Continue without default model - viewer will show empty scene
-      }
-    }
-  }
-
-  /**
-   * Get performance settings based on device capabilities
-   */
-  getPerformanceSettings() {
-    const deviceInfo = DeviceUtils.getDeviceInfo();
-
-    // Adjust quality based on device performance
-    if (deviceInfo.isMobile) {
-      return {
-        shadowMapSize: 1024,
-        antialias: false,
-        pixelRatio: Math.min(window.devicePixelRatio, 2),
-        maxLights: 3,
-      };
-    } else if (deviceInfo.isLowEnd) {
-      return {
-        shadowMapSize: 2048,
-        antialias: true,
-        pixelRatio: Math.min(window.devicePixelRatio, 2),
-        maxLights: 5,
-      };
-    } else {
-      return {
-        shadowMapSize: 4096,
-        antialias: true,
-        pixelRatio: Math.min(window.devicePixelRatio, 3),
-        maxLights: 8,
-      };
-    }
-  }
-
-  /**
-   * Set up global event listeners
+   * Setup viewer event listeners
    */
   setupEventListeners() {
-    // Window resize
-    window.addEventListener('resize', this.handleResize);
+    if (!this.viewer) return;
 
-    // Page visibility changes (for performance optimization)
-    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    // Initialization events
+    this.viewer.addEventListener('initStart', () => {
+      console.log('App: Viewer initialization started');
+    });
 
-    // Global error handling
-    window.addEventListener('error', this.errorHandler.handleGlobalError);
-    window.addEventListener(
-      'unhandledrejection',
-      this.errorHandler.handleUnhandledRejection
-    );
+    this.viewer.addEventListener('initComplete', () => {
+      console.log('App: Viewer initialization completed');
+    });
 
-    // Keyboard shortcuts
-    if (APP_CONFIG.features.keyboardShortcuts) {
-      document.addEventListener('keydown', this.handleKeydown.bind(this));
+    // Model loading events
+    this.viewer.addEventListener('modelLoaded', event => {
+      console.log('App: Model loaded successfully', event.model);
+      this.updateLoadingProgress(100);
+    });
+
+    // Camera events
+    this.viewer.addEventListener('cameraChange', () => {
+      // Camera position changed - could trigger analytics here
+    });
+
+    this.viewer.addEventListener('cameraReset', () => {
+      console.log('App: Camera reset to default position');
+    });
+
+    // Control events
+    this.viewer.addEventListener('autoRotateToggle', event => {
+      console.log(`App: Auto rotate ${event.enabled ? 'enabled' : 'disabled'}`);
+    });
+
+    // Material and lighting events
+    this.viewer.addEventListener('materialPresetChange', event => {
+      console.log(`App: Material preset changed to ${event.preset}`);
+    });
+
+    this.viewer.addEventListener('lightIntensityChange', event => {
+      console.log(`App: Light intensity changed to ${event.intensity}`);
+    });
+
+    // Error handling
+    this.viewer.addEventListener('error', this.handleViewerError);
+
+    // Performance monitoring
+    this.viewer.addEventListener('performanceWarning', event => {
+      console.warn('App: Performance warning:', event.details);
+    });
+  }
+
+  /**
+   * Setup retry button functionality
+   */
+  setupRetryButton() {
+    const retryButton = document.getElementById('retry-button');
+    if (retryButton) {
+      retryButton.addEventListener('click', this.handleRetryClick);
     }
   }
 
   /**
-   * Handle window resize
+   * Handle viewer errors
+   * @param {string} context - Error context
+   * @param {Error} error - Error object
    */
-  handleResize() {
-    if (this.viewer && this.isInitialized) {
-      this.viewer.handleResize();
-    }
-  }
+  handleViewerError(context, error) {
+    console.error(`App: Viewer error in ${context}:`, error);
 
-  /**
-   * Handle page visibility changes
-   */
-  handleVisibilityChange() {
-    if (this.viewer && this.isInitialized) {
-      if (document.hidden) {
-        this.viewer.pause();
-      } else {
-        this.viewer.resume();
+    // Show user-friendly error message
+    const errorOverlay = document.getElementById('error-overlay');
+    const errorMessage = document.getElementById('error-message');
+
+    if (errorOverlay && errorMessage) {
+      let userMessage = 'Something went wrong. Please try again.';
+
+      // Customize message based on error type
+      if (context === 'initialization') {
+        userMessage =
+          'Failed to initialize 3D viewer. Please check your browser compatibility.';
+      } else if (context === 'modelLoading') {
+        userMessage =
+          'Failed to load 3D model. Please check your internet connection.';
       }
+
+      errorMessage.textContent = userMessage;
+      errorOverlay.classList.remove('hidden');
     }
   }
 
   /**
-   * Handle keyboard shortcuts
+   * Handle retry button click
    */
-  handleKeydown(event) {
-    // Only handle shortcuts when not typing in input fields
-    if (
-      event.target.tagName === 'INPUT' ||
-      event.target.tagName === 'TEXTAREA'
-    ) {
-      return;
+  async handleRetryClick() {
+    console.log('App: Retry button clicked');
+
+    // Hide error overlay
+    const errorOverlay = document.getElementById('error-overlay');
+    if (errorOverlay) {
+      errorOverlay.classList.add('hidden');
     }
 
-    switch (event.code) {
-      case 'Space':
-        event.preventDefault();
-        this.viewer?.toggleAutoRotate();
-        break;
-      case 'KeyR':
-        if (event.ctrlKey || event.metaKey) {
-          event.preventDefault();
-          this.viewer?.resetCamera();
+    // Try to reinitialize if viewer failed completely
+    if (!this.isInitialized) {
+      await this.init();
+    } else if (this.viewer) {
+      // Try to reload the model
+      try {
+        const defaultUrl = this.viewer.config.model?.defaultUrl;
+        if (defaultUrl) {
+          await this.viewer.loadModel(defaultUrl);
         }
-        break;
-      case 'KeyF':
-        event.preventDefault();
-        this.viewer?.toggleFullscreen();
-        break;
-      case 'KeyP':
-        if (event.ctrlKey || event.metaKey) {
-          event.preventDefault();
-          this.viewer?.captureScreenshot();
-        }
-        break;
-    }
-  }
-
-  /**
-   * Check WebGL support
-   */
-  checkWebGLSupport() {
-    try {
-      const canvas = document.createElement('canvas');
-      const gl =
-        canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      return !!gl;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /**
-   * Update loading progress text
-   */
-  updateLoadingProgress(message) {
-    if (this.loadingProgress) {
-      this.loadingProgress.textContent = message;
-    }
-
-    if (APP_CONFIG.debug) {
-      console.log(`[Loading] ${message}`);
-    }
-  }
-
-  /**
-   * Hide loading screen with smooth transition
-   */
-  hideLoadingScreen() {
-    if (this.loadingScreen) {
-      this.loadingScreen.classList.add('hidden');
-
-      // Remove from DOM after transition
-      setTimeout(() => {
-        if (this.loadingScreen) {
-          this.loadingScreen.style.display = 'none';
-        }
-      }, 500);
-    }
-  }
-
-  /**
-   * Show error screen
-   */
-  showErrorScreen(error) {
-    // Hide loading screen
-    if (this.loadingScreen) {
-      this.loadingScreen.style.display = 'none';
-    }
-
-    // Show error screen
-    if (this.errorScreen) {
-      this.errorScreen.classList.add('visible');
-    }
-
-    // Update error message
-    if (this.errorMessage && error) {
-      this.errorMessage.textContent = this.getErrorMessage(error);
-    }
-  }
-
-  /**
-   * Get user-friendly error message
-   */
-  getErrorMessage(error) {
-    if (typeof error === 'string') {
-      return error;
-    }
-
-    if (error.message) {
-      // Handle specific error types
-      if (error.message.includes('WebGL')) {
-        return 'Your browser or device does not support WebGL, which is required for 3D graphics. Please try updating your browser or check if WebGL is enabled.';
+      } catch (error) {
+        this.handleViewerError('modelLoading', error);
       }
-
-      if (
-        error.message.includes('fetch') ||
-        error.message.includes('network')
-      ) {
-        return 'Failed to load required resources. Please check your internet connection and try again.';
-      }
-
-      if (error.message.includes('model') || error.message.includes('GLTF')) {
-        return 'Failed to load the 3D model. The file might be corrupted or in an unsupported format.';
-      }
-
-      return error.message;
     }
-
-    return 'An unexpected error occurred. Please try refreshing the page.';
   }
 
   /**
-   * Handle initialization errors
+   * Update loading progress
+   * @param {number} progress - Progress percentage (0-100)
    */
-  handleInitializationError(error) {
-    console.error('Failed to initialize application:', error);
-
-    if (this.errorHandler) {
-      this.errorHandler.logError(error, 'initialization');
+  updateLoadingProgress(progress) {
+    const loadingBar = document.getElementById('loading-bar');
+    if (loadingBar) {
+      loadingBar.style.width = `${progress}%`;
     }
-
-    this.showErrorScreen(error);
   }
 
   /**
-   * Handle runtime errors
+   * Show loading overlay with optional message
+   * @param {string} message - Loading message
    */
-  handleError(error, context = 'runtime') {
-    console.error(`Application error (${context}):`, error);
+  showLoading(message = 'Loading...') {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingText = loadingOverlay?.querySelector('.loading-text');
 
-    if (this.errorHandler) {
-      this.errorHandler.logError(error, context);
+    if (loadingOverlay) {
+      loadingOverlay.style.display = 'flex';
     }
 
-    // For runtime errors, try to recover gracefully
-    if (this.isInitialized && context !== 'initialization') {
-      this.attemptErrorRecovery(error, context);
-    } else {
-      this.showErrorScreen(error);
+    if (loadingText) {
+      loadingText.textContent = message;
     }
   }
 
   /**
-   * Attempt to recover from runtime errors
+   * Hide loading overlay
    */
-  attemptErrorRecovery(error, context) {
-    try {
-      switch (context) {
-        case 'model-loading':
-          // Try to reload the model or fall back to default
-          console.warn('Model loading failed, attempting recovery...');
-          break;
-
-        case 'rendering':
-          // Try to restart the render loop
-          console.warn('Rendering error, attempting to restart...');
-          this.viewer?.restartRenderer();
-          break;
-
-        default:
-          // For unknown errors, just log and continue
-          console.warn('Unknown error occurred, continuing...');
-      }
-    } catch (recoveryError) {
-      console.error('Error recovery failed:', recoveryError);
-      this.showErrorScreen(error);
+  hideLoading() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    if (loadingOverlay) {
+      loadingOverlay.style.display = 'none';
     }
   }
 
   /**
-   * Log device information for debugging
+   * Get application information
+   * @returns {Object} App information
    */
-  logDeviceInfo(deviceInfo) {
-    if (APP_CONFIG.debug) {
-      console.group('🔍 Device Information');
-      console.log('Device Type:', deviceInfo.deviceType);
-      console.log('Is Mobile:', deviceInfo.isMobile);
-      console.log('Is Touch Device:', deviceInfo.isTouchDevice);
-      console.log(
-        'Screen Resolution:',
-        `${deviceInfo.screenWidth}x${deviceInfo.screenHeight}`
-      );
-      console.log('Pixel Ratio:', deviceInfo.pixelRatio);
-      console.log('User Agent:', deviceInfo.userAgent);
-      console.log('WebGL Support:', deviceInfo.webglSupport);
-      console.groupEnd();
-    }
+  getInfo() {
+    return {
+      version: '1.0.0',
+      isInitialized: this.isInitialized,
+      viewer: this.viewer?.getInfo() || null,
+      userAgent: navigator.userAgent,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   /**
-   * Log successful initialization
-   */
-  logInitializationSuccess() {
-    if (APP_CONFIG.debug) {
-      console.group('🚀 Application Initialized Successfully');
-      console.log('Version:', APP_CONFIG.version);
-      console.log('Build Time:', APP_CONFIG.buildTime);
-      console.log('Features:', APP_CONFIG.features);
-      console.log('Performance Monitor:', !!this.performanceMonitor);
-      console.log('Initialization Time:', performance.now().toFixed(2) + 'ms');
-      console.groupEnd();
-    }
-  }
-
-  /**
-   * Cleanup resources when page unloads
+   * Cleanup application
    */
   dispose() {
-    try {
-      // Remove event listeners
-      window.removeEventListener('resize', this.handleResize);
-      document.removeEventListener(
-        'visibilitychange',
-        this.handleVisibilityChange
-      );
-      window.removeEventListener('error', this.errorHandler?.handleGlobalError);
-      window.removeEventListener(
-        'unhandledrejection',
-        this.errorHandler?.handleUnhandledRejection
-      );
+    console.log('App: Starting cleanup...');
 
-      // Dispose viewer
-      if (this.viewer) {
-        this.viewer.dispose();
-        this.viewer = null;
-      }
-
-      // Dispose performance monitor
-      if (this.performanceMonitor) {
-        this.performanceMonitor.dispose();
-        this.performanceMonitor = null;
-      }
-
-      // Dispose error handler
-      if (this.errorHandler) {
-        this.errorHandler.dispose();
-        this.errorHandler = null;
-      }
-
-      console.log('Application disposed successfully');
-    } catch (error) {
-      console.error('Error during disposal:', error);
+    if (this.viewer) {
+      this.viewer.dispose();
+      this.viewer = null;
     }
+
+    // Remove event listeners
+    const retryButton = document.getElementById('retry-button');
+    if (retryButton) {
+      retryButton.removeEventListener('click', this.handleRetryClick);
+    }
+
+    this.isInitialized = false;
+    console.log('App: Cleanup completed');
   }
 }
 
 /**
- * Application initialization and startup
+ * Global error handler
  */
-async function startApplication() {
-  // Create app instance
+function setupGlobalErrorHandling() {
+  window.addEventListener('error', event => {
+    console.error('Global error:', event.error);
+  });
+
+  window.addEventListener('unhandledrejection', event => {
+    console.error('Unhandled promise rejection:', event.reason);
+  });
+}
+
+/**
+ * Check WebGL support
+ * @returns {boolean} WebGL support status
+ */
+function checkWebGLSupport() {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl =
+      canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    return !!gl;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Initialize application when DOM is ready
+ */
+function initializeApp() {
+  // Check WebGL support
+  if (!checkWebGLSupport()) {
+    console.error('WebGL is not supported in this browser');
+
+    const errorOverlay = document.getElementById('error-overlay');
+    const errorMessage = document.getElementById('error-message');
+
+    if (errorOverlay && errorMessage) {
+      errorMessage.textContent =
+        'Your browser does not support WebGL. Please update your browser or use a different one.';
+      errorOverlay.classList.remove('hidden');
+    }
+
+    return;
+  }
+
+  // Setup global error handling
+  setupGlobalErrorHandling();
+
+  // Create and initialize app
   const app = new App();
 
-  // Make app globally available for debugging
-  if (APP_CONFIG.debug) {
-    window.__APP__ = app;
+  // Make app globally accessible for debugging
+  if (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1'
+  ) {
+    window.app = app;
+    window.THREE = (async () => {
+      const THREE = await import('three');
+      return THREE;
+    })();
   }
+
+  // Initialize app
+  app.init().catch(error => {
+    console.error('Failed to initialize application:', error);
+  });
 
   // Handle page unload
   window.addEventListener('beforeunload', () => {
     app.dispose();
   });
-
-  // Start the application
-  await app.init();
-
-  return app;
 }
 
-/**
- * Document ready handler
- */
-function onDocumentReady(callback) {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', callback);
-  } else {
-    callback();
-  }
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+  initializeApp();
 }
 
-// Start the application when DOM is ready
-onDocumentReady(() => {
-  startApplication().catch(error => {
-    console.error('Failed to start application:', error);
-
-    // Show basic error message if everything fails
-    const errorScreen = document.getElementById('errorScreen');
-    const errorMessage = document.getElementById('errorMessage');
-    const loadingScreen = document.getElementById('loadingScreen');
-
-    if (loadingScreen) loadingScreen.style.display = 'none';
-    if (errorScreen) errorScreen.classList.add('visible');
-    if (errorMessage) {
-      errorMessage.textContent =
-        'Critical error: Failed to initialize the application. Please refresh the page or try a different browser.';
-    }
-  });
-});
+// Export for module usage
+export { App, checkWebGLSupport };
