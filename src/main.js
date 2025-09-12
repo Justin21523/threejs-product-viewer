@@ -249,6 +249,50 @@ class App {
     this.isInitialized = false;
     console.log('App: Cleanup completed');
   }
+
+  /**
+   * Capture screenshot
+   */
+  captureScreenshot() {
+    if (!this.viewer) return;
+
+    try {
+      const dataURL = this.viewer.captureScreenshot({
+        format: 'image/png',
+        quality: 1.0,
+      });
+
+      if (dataURL) {
+        // Create download link
+        const link = document.createElement('a');
+        link.download = `3d-model-screenshot-${Date.now()}.png`;
+        link.href = dataURL;
+        link.click();
+
+        console.log('App: Screenshot captured and downloaded');
+      }
+    } catch (error) {
+      console.error('App: Screenshot capture failed:', error);
+    }
+  }
+
+  /**
+   * Toggle shadows on/off
+   */
+  toggleShadows() {
+    if (!this.viewer || !this.viewer.lightingManager) return;
+
+    const currentState = this.viewer.lightingManager.shadowsEnabled;
+    this.viewer.lightingManager.setShadowsEnabled(!currentState);
+
+    // Update button state
+    const shadowsBtn = document.querySelector('#toggle-shadows');
+    if (shadowsBtn) {
+      shadowsBtn.classList.toggle('active', !currentState);
+    }
+
+    console.log(`App: Shadows ${!currentState ? 'enabled' : 'disabled'}`);
+  }
 }
 
 /**
