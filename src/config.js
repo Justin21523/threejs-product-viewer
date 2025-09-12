@@ -47,8 +47,19 @@ export const DEFAULT_CONFIG = {
     },
   },
 
-  // Lighting settings
+  // Enhanced lighting settings
   lighting: {
+    defaultPreset: 'studio',
+    globalIntensity: 1.0,
+    shadowsEnabled: true,
+    animations: {
+      enabled: false,
+      speed: 1.0,
+    },
+    environment: {
+      enabled: false,
+      url: null, // Path to HDRI file
+    },
     ambient: {
       color: 0x404040,
       intensity: 0.3,
@@ -77,6 +88,14 @@ export const DEFAULT_CONFIG = {
     },
   },
 
+  // Enhanced material settings
+  materials: {
+    defaultPreset: 'default',
+    textureCache: true,
+    enhanceMaterials: true,
+    supportedFormats: ['.jpg', '.png', '.hdr', '.exr'],
+  },
+
   // Model loading settings
   model: {
     defaultUrl: '/assets/models/default-product.glb',
@@ -84,6 +103,9 @@ export const DEFAULT_CONFIG = {
     enableDraco: true,
     enableKTX2: true,
     enableMeshOpt: true,
+    center: true,
+    optimize: true,
+    maxCacheSize: 10,
   },
 
   // Performance budgets
@@ -114,6 +136,7 @@ export const DEFAULT_CONFIG = {
     lighting: true,
     screenshots: true,
     fullscreen: true,
+    fileUpload: true,
     vr: false, // WebXR support
     ar: false, // WebXR AR support
   },
@@ -148,6 +171,11 @@ export const ENVIRONMENT_CONFIG = {
     ui: {
       showPerformanceStats: true,
     },
+    lighting: {
+      animations: {
+        enabled: true,
+      },
+    },
   },
 
   production: {
@@ -173,6 +201,10 @@ export const DEVICE_CONFIG = {
     renderer: {
       pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
       antialias: false,
+      shadowMap: {
+        enabled: true,
+        type: 'PCFShadowMap', // Less expensive shadow type
+      },
     },
     performance: {
       targetFPS: 30,
@@ -180,11 +212,16 @@ export const DEVICE_CONFIG = {
       maxTriangles: 50000,
     },
     lighting: {
+      globalIntensity: 0.8, // Slightly dimmer for better performance
+      shadowsEnabled: true,
       directional: {
         shadow: {
           mapSize: { width: 1024, height: 1024 },
         },
       },
+    },
+    materials: {
+      enhanceMaterials: false, // Disable material enhancements for performance
     },
   },
 
@@ -196,10 +233,341 @@ export const DEVICE_CONFIG = {
       targetFPS: 45,
       maxMemoryMB: 350,
     },
+    lighting: {
+      globalIntensity: 0.9,
+    },
   },
 
   desktop: {
     // Use default configuration
+  },
+};
+
+/**
+ * Material presets for quick switching
+ */
+export const MATERIAL_PRESETS = {
+  default: {
+    name: 'Default',
+    description: 'Standard material with balanced properties',
+    type: 'MeshStandardMaterial',
+    properties: {
+      color: 0xffffff,
+      metalness: 0.0,
+      roughness: 1.0,
+      emissive: 0x000000,
+      emissiveIntensity: 0.0,
+      transparent: false,
+      opacity: 1.0,
+    },
+  },
+
+  metallic: {
+    name: 'Metallic',
+    description: 'Highly reflective metallic surface',
+    type: 'MeshStandardMaterial',
+    properties: {
+      color: 0xc0c0c0,
+      metalness: 1.0,
+      roughness: 0.1,
+      emissive: 0x000000,
+      emissiveIntensity: 0.0,
+      transparent: false,
+      opacity: 1.0,
+    },
+  },
+
+  matte: {
+    name: 'Matte',
+    description: 'Non-reflective matte finish',
+    type: 'MeshStandardMaterial',
+    properties: {
+      color: 0xffffff,
+      metalness: 0.0,
+      roughness: 0.9,
+      emissive: 0x000000,
+      emissiveIntensity: 0.0,
+      transparent: false,
+      opacity: 1.0,
+    },
+  },
+
+  glossy: {
+    name: 'Glossy',
+    description: 'Smooth glossy surface with some reflection',
+    type: 'MeshStandardMaterial',
+    properties: {
+      color: 0xffffff,
+      metalness: 0.1,
+      roughness: 0.1,
+      emissive: 0x000000,
+      emissiveIntensity: 0.0,
+      transparent: false,
+      opacity: 1.0,
+    },
+  },
+  glass: {
+    name: 'Glass',
+    description: 'Transparent glass material',
+    type: 'MeshPhysicalMaterial',
+    properties: {
+      color: 0xffffff,
+      metalness: 0.0,
+      roughness: 0.0,
+      transmission: 1.0,
+      transparent: true,
+      opacity: 0.9,
+      ior: 1.5,
+      thickness: 0.5,
+    },
+  },
+
+  plastic: {
+    name: 'Plastic',
+    description: 'Smooth plastic material',
+    type: 'MeshStandardMaterial',
+    properties: {
+      color: 0x4a90e2,
+      metalness: 0.0,
+      roughness: 0.3,
+      emissive: 0x000000,
+      emissiveIntensity: 0.0,
+      transparent: false,
+      opacity: 1.0,
+    },
+  },
+
+  ceramic: {
+    name: 'Ceramic',
+    description: 'Smooth ceramic surface',
+    type: 'MeshStandardMaterial',
+    properties: {
+      color: 0xf8f8f8,
+      metalness: 0.0,
+      roughness: 0.2,
+      emissive: 0x000000,
+      emissiveIntensity: 0.0,
+      transparent: false,
+      opacity: 1.0,
+    },
+  },
+
+  carbon_fiber: {
+    name: 'Carbon Fiber',
+    description: 'Woven carbon fiber pattern',
+    type: 'MeshStandardMaterial',
+    properties: {
+      color: 0x1a1a1a,
+      metalness: 0.8,
+      roughness: 0.4,
+      emissive: 0x000000,
+      emissiveIntensity: 0.0,
+      transparent: false,
+      opacity: 1.0,
+    },
+  },
+};
+
+/**
+ * Lighting presets for different scenarios
+ */
+export const LIGHTING_PRESETS = {
+  studio: {
+    name: 'Studio',
+    description: 'Professional studio setup with key, fill, and rim lights',
+    lights: [
+      {
+        type: 'DirectionalLight',
+        name: 'keyLight',
+        color: 0xffffff,
+        intensity: 1.2,
+        position: [10, 10, 5],
+        target: [0, 0, 0],
+        castShadow: true,
+        shadowMapSize: [2048, 2048],
+        shadowCamera: {
+          near: 0.5,
+          far: 50,
+          left: -10,
+          right: 10,
+          top: 10,
+          bottom: -10,
+        },
+      },
+      {
+        type: 'DirectionalLight',
+        name: 'fillLight',
+        color: 0xffffff,
+        intensity: 0.4,
+        position: [-8, 6, 3],
+        target: [0, 0, 0],
+        castShadow: false,
+      },
+      {
+        type: 'DirectionalLight',
+        name: 'rimLight',
+        color: 0xffffff,
+        intensity: 0.6,
+        position: [0, 8, -8],
+        target: [0, 0, 0],
+        castShadow: false,
+      },
+      {
+        type: 'AmbientLight',
+        name: 'ambient',
+        color: 0x404040,
+        intensity: 0.3,
+      },
+    ],
+  },
+
+  outdoor: {
+    name: 'Outdoor',
+    description: 'Natural outdoor lighting with sun and sky',
+    lights: [
+      {
+        type: 'DirectionalLight',
+        name: 'sun',
+        color: 0xffffcc,
+        intensity: 1.0,
+        position: [15, 20, 10],
+        target: [0, 0, 0],
+        castShadow: true,
+        shadowMapSize: [2048, 2048],
+        shadowCamera: {
+          near: 0.5,
+          far: 100,
+          left: -20,
+          right: 20,
+          top: 20,
+          bottom: -20,
+        },
+      },
+      {
+        type: 'HemisphereLight',
+        name: 'sky',
+        skyColor: 0x87ceeb,
+        groundColor: 0x8b7355,
+        intensity: 0.6,
+      },
+      {
+        type: 'AmbientLight',
+        name: 'ambient',
+        color: 0x404040,
+        intensity: 0.2,
+      },
+    ],
+  },
+
+  dramatic: {
+    name: 'Dramatic',
+    description: 'High contrast dramatic lighting with strong shadows',
+    lights: [
+      {
+        type: 'SpotLight',
+        name: 'mainSpot',
+        color: 0xffffff,
+        intensity: 2.0,
+        position: [8, 12, 8],
+        target: [0, 0, 0],
+        angle: Math.PI / 6,
+        penumbra: 0.3,
+        distance: 50,
+        decay: 2,
+        castShadow: true,
+        shadowMapSize: [2048, 2048],
+      },
+      {
+        type: 'SpotLight',
+        name: 'accent',
+        color: 0x4488ff,
+        intensity: 0.8,
+        position: [-6, 8, -6],
+        target: [0, 0, 0],
+        angle: Math.PI / 4,
+        penumbra: 0.5,
+        distance: 30,
+        decay: 2,
+        castShadow: false,
+      },
+      {
+        type: 'AmbientLight',
+        name: 'ambient',
+        color: 0x080808,
+        intensity: 0.1,
+      },
+    ],
+  },
+
+  soft: {
+    name: 'Soft',
+    description: 'Even, soft lighting with minimal shadows',
+    lights: [
+      {
+        type: 'DirectionalLight',
+        name: 'main',
+        color: 0xffffff,
+        intensity: 0.6,
+        position: [5, 8, 5],
+        target: [0, 0, 0],
+        castShadow: true,
+        shadowMapSize: [1024, 1024],
+        shadowCamera: {
+          near: 0.5,
+          far: 30,
+          left: -8,
+          right: 8,
+          top: 8,
+          bottom: -8,
+        },
+      },
+      {
+        type: 'HemisphereLight',
+        name: 'hemisphere',
+        skyColor: 0xffffff,
+        groundColor: 0xcccccc,
+        intensity: 0.8,
+      },
+      {
+        type: 'AmbientLight',
+        name: 'ambient',
+        color: 0x404040,
+        intensity: 0.6,
+      },
+    ],
+  },
+
+  night: {
+    name: 'Night',
+    description: 'Moody night lighting with cool tones',
+    lights: [
+      {
+        type: 'DirectionalLight',
+        name: 'moonlight',
+        color: 0xaaccff,
+        intensity: 0.4,
+        position: [8, 15, 12],
+        target: [0, 0, 0],
+        castShadow: true,
+        shadowMapSize: [1024, 1024],
+      },
+      {
+        type: 'PointLight',
+        name: 'streetLight',
+        color: 0xffaa44,
+        intensity: 1.5,
+        position: [6, 8, 6],
+        distance: 20,
+        decay: 2,
+        castShadow: false,
+      },
+      {
+        type: 'AmbientLight',
+        name: 'ambient',
+        color: 0x001122,
+        intensity: 0.2,
+      },
+    ],
   },
 };
 
@@ -252,71 +620,45 @@ export function getConfig(environment = 'development', deviceType = 'desktop') {
 }
 
 /**
- * Material presets for quick switching
+ * Get material preset by ID
+ * @param {string} id - Material preset ID
+ * @returns {Object|null} Material preset or null
  */
-export const MATERIAL_PRESETS = {
-  default: {
-    name: 'Default',
-    metalness: 0.0,
-    roughness: 1.0,
-    color: 0xffffff,
-    emissive: 0x000000,
-  },
-
-  metallic: {
-    name: 'Metallic',
-    metalness: 1.0,
-    roughness: 0.2,
-    color: 0xcccccc,
-    emissive: 0x000000,
-  },
-
-  matte: {
-    name: 'Matte',
-    metalness: 0.0,
-    roughness: 0.8,
-    color: 0xffffff,
-    emissive: 0x000000,
-  },
-
-  glossy: {
-    name: 'Glossy',
-    metalness: 0.3,
-    roughness: 0.1,
-    color: 0xffffff,
-    emissive: 0x000000,
-  },
-};
+export function getMaterialPreset(id) {
+  return MATERIAL_PRESETS[id] || null;
+}
 
 /**
- * Lighting presets for different scenarios
+ * Get lighting preset by ID
+ * @param {string} id - Lighting preset ID
+ * @returns {Object|null} Lighting preset or null
  */
-export const LIGHTING_PRESETS = {
-  studio: {
-    name: 'Studio',
-    ambient: { intensity: 0.3 },
-    directional: { intensity: 1.2 },
-    hemisphere: { intensity: 0.5 },
-  },
+export function getLightingPreset(id) {
+  return LIGHTING_PRESETS[id] || null;
+}
 
-  outdoor: {
-    name: 'Outdoor',
-    ambient: { intensity: 0.5 },
-    directional: { intensity: 0.8 },
-    hemisphere: { intensity: 0.7 },
-  },
+/**
+ * Get all available material presets
+ * @returns {Array} Array of material preset info
+ */
+export function getAllMaterialPresets() {
+  return Object.entries(MATERIAL_PRESETS).map(([id, preset]) => ({
+    id,
+    name: preset.name,
+    description: preset.description,
+    type: preset.type,
+  }));
+}
 
-  dramatic: {
-    name: 'Dramatic',
-    ambient: { intensity: 0.1 },
-    directional: { intensity: 2.0 },
-    hemisphere: { intensity: 0.3 },
-  },
-
-  soft: {
-    name: 'Soft',
-    ambient: { intensity: 0.6 },
-    directional: { intensity: 0.4 },
-    hemisphere: { intensity: 0.8 },
-  },
-};
+/**
+ * Get all available lighting presets
+ * @returns {Array} Array of lighting preset info
+ */
+export function getAllLightingPresets() {
+  return Object.entries(LIGHTING_PRESETS).map(([id, preset]) => ({
+    id,
+    name: preset.name,
+    description: preset.description,
+    lightCount: preset.lights.length,
+  }));
+}
