@@ -3,11 +3,15 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SceneManager } from './scene-manager.js';
 import { CameraManager } from './camera-manager.js';
 import { RendererManager } from './renderer-manager.js';
+import { ModelManager } from './model-manager.js';
+import { MaterialManager } from './material-manager.js';
+import { LightingManager } from './lighting-manager.js';
+import { FileDropHandler } from '../utils/file-drop-handler.js';
 import { getConfig } from '../config.js';
 
 /**
- * ProductViewer - Main 3D product viewer class
- * Orchestrates all managers and provides the main API
+ * ProductViewer - Enhanced 3D product viewer with materials and lighting
+ * Now includes complete material and lighting management systems
  */
 export class ProductViewer extends THREE.EventDispatcher {
   constructor(container, options = {}) {
@@ -39,6 +43,12 @@ export class ProductViewer extends THREE.EventDispatcher {
     this.sceneManager = null;
     this.cameraManager = null;
     this.rendererManager = null;
+    this.modelManager = null;
+    this.materialManager = null;
+    this.lightingManager = null;
+
+    // File handling
+    this.fileDropHandler = null;
 
     // Controls
     this.controls = null;
@@ -47,6 +57,7 @@ export class ProductViewer extends THREE.EventDispatcher {
     this.isInitialized = false;
     this.isDisposed = false;
     this.isAnimating = false;
+    this.currentModel = null;
 
     // Performance monitoring
     this.performanceStats = {
@@ -93,8 +104,14 @@ export class ProductViewer extends THREE.EventDispatcher {
       // Initialize core managers
       await this.initializeCore();
 
+      // Initialize enhanced managers
+      await this.initializeEnhancedManagers();
+
       // Setup controls
       this.setupControls();
+
+      // Setup file handling
+      this.setupFileHandling();
 
       // Initialize UI
       this.initializeUI();
@@ -141,6 +158,145 @@ export class ProductViewer extends THREE.EventDispatcher {
     this.cameraManager.updateAspectRatio(size.width, size.height);
 
     console.log('ProductViewer: Core managers initialized');
+  }
+
+  /**
+   * Initialize enhanced managers (materials, lighting, models)
+   */
+  async initializeEnhancedManagers() {
+    // Initialize model manager
+    this.modelManager = new ModelManager(
+      this.rendererManager.getRenderer(),
+      this.config
+    );
+
+    // Initialize material manager
+    this.materialManager = new MaterialManager(this.config);
+
+    // Initialize lighting manager
+    this.lightingManager = new LightingManager(
+      this.sceneManager.getScene(),
+      this.config
+    );
+
+    // Connect manager events
+    this.setupManagerEvents();
+
+    console.log('ProductViewer: Enhanced managers initialized');
+  }
+
+  /**
+   * Setup inter-manager event connections
+   */
+  setupManagerEvents() {
+    // Model Manager Events
+    this.modelManager.addEventListener('loadStart', event => {
+      this.showLoadingOverlay();
+      this.updateLoadingProgress(0, 'Loading model...');
+      this.dispatchEvent({ type: 'modelLoadStart', url: event.url });
+    });
+
+    this.modelManager.addEventListener('loadProgress', event => {
+      this.updateLoadingProgress(event.progress, event.stage);
+    });
+
+    this.modelManager.addEventListener('loadComplete', event => {
+      this.hideLoadingOverlay();
+      this.handleModelLoaded(event.model);
+      this.dispatchEvent({ type: 'modelLoadComplete', model: event.model });
+    });
+
+    this.modelManager.addEventListener('loadError', event => {
+      this.hideLoadingOverlay();
+      this.handleError('Model loading failed', event.error);
+    });
+
+    // Material Manager Events
+    this.materialManager.addEventListener('materialPresetApplied', event => {
+      console.log(`Material preset "${event.preset}" applied to model`);
+      this.rendererManager.requestRender();
+      this.dispatchEvent({ type: 'materialChanged', preset: event.preset });
+    });
+
+    // Lighting Manager Events
+    this.lightingManager.addEventListener('lightingPresetApplied', event => {
+      console.log(`Lighting preset "${event.preset}" applied`);
+      this.rendererManager.requestRender();
+      this.dispatchEvent({ type: 'lightingChanged', preset: event.preset });
+    });
+
+    this.lightingManager.addEventListener('globalIntensityChanged', event => {
+      this.rendererManager.requestRender();
+    });
+  }
+
+  /**
+   * Handle successful model loading
+   * @param {THREE.Object3D} model - Loaded model
+   */
+  async handleModelLoaded(model) {
+    // Remove previous model if exists
+    if (this.currentModel) {
+      this.sceneManager.removeObject('current-model');
+    }
+
+    // Add new model to scene
+    this.sceneManager.addObject(model, 'current-model');
+    this.currentModel = model;
+
+    // Set current model for material manager
+    this.materialManager.setCurrentModel(model);
+
+    // Frame the model in view
+    await this.cameraManager.frameObject(model);
+
+    // Apply initial material preset if specified
+    const initialPreset = this.config.materials?.defaultPreset || 'default';
+    await this.materialManager.applyMaterialPreset(initialPreset);
+
+    // Update UI
+    this.updateModelInfo(model);
+
+    console.log('ProductViewer: Model loaded and processed successfully');
+  }
+
+  /**
+   * Setup file drop handling
+   */
+  setupFileHandling() {
+    this.fileDropHandler = new FileDropHandler(this.container, {
+      allowedExtensions: ['.glb', '.gltf'],
+      maxFileSize: 50 * 1024 * 1024, // 50MB
+      showDropZone: true,
+      autoProcess: true,
+    });
+
+    // Handle file ready event
+    this.fileDropHandler.addEventListener('fileready', async event => {
+      try {
+        const { file, url, cleanup } = event.detail;
+        console.log(`Loading dropped file: ${file.name}`);
+
+        await this.loadModel(url);
+
+        // Cleanup object URL
+        cleanup();
+
+        // Hide file drop overlay
+        this.fileDropHandler.setProcessingComplete();
+      } catch (error) {
+        this.handleError('File loading failed', error);
+        this.fileDropHandler.resetState();
+      }
+    });
+
+    // Handle file errors
+    this.fileDropHandler.addEventListener('fileerror', event => {
+      const { error } = event.detail;
+      this.handleError('File validation failed', new Error(error));
+    });
+
+    console.log('ProductViewer: File drop handling initialized');
   }
 
   /**
@@ -205,7 +361,47 @@ export class ProductViewer extends THREE.EventDispatcher {
       this.ui.performanceStats.style.display = 'none';
     }
 
+    // Populate UI with presets
+    this.populateUIPresets();
+
     console.log('ProductViewer: UI initialized');
+  }
+
+  /**
+   * Populate UI elements with material and lighting presets
+   */
+  populateUIPresets() {
+    // Populate material presets
+    const materialSelector =
+      this.ui.controlPanel?.querySelector('#material-preset');
+    if (materialSelector && this.materialManager) {
+      const presets = this.materialManager.getAvailablePresets();
+      materialSelector.innerHTML = '';
+
+      presets.forEach(preset => {
+        const option = document.createElement('option');
+        option.value = preset.id;
+        option.textContent = preset.name;
+        option.title = preset.description;
+        materialSelector.appendChild(option);
+      });
+    }
+
+    // Populate lighting presets
+    const lightingSelector =
+      this.ui.controlPanel?.querySelector('#lighting-preset');
+    if (lightingSelector && this.lightingManager) {
+      const presets = this.lightingManager.getAvailablePresets();
+      lightingSelector.innerHTML = '';
+
+      presets.forEach(preset => {
+        const option = document.createElement('option');
+        option.value = preset.id;
+        option.textContent = preset.name;
+        option.title = preset.description;
+        lightingSelector.appendChild(option);
+      });
+    }
   }
 
   /**
@@ -231,6 +427,34 @@ export class ProductViewer extends THREE.EventDispatcher {
         this.resetCamera();
       });
     }
+    // Upload model button
+    const showFileDropBtn =
+      this.ui.controlPanel.querySelector('#show-file-drop');
+    if (showFileDropBtn) {
+      showFileDropBtn.addEventListener('click', () => {
+        if (this.fileDropHandler) {
+          this.fileDropHandler.showDropZone();
+        }
+      });
+    }
+
+    // Material preset selector
+    const materialSelector =
+      this.ui.controlPanel.querySelector('#material-preset');
+    if (materialSelector) {
+      materialSelector.addEventListener('change', async e => {
+        await this.setMaterialPreset(e.target.value);
+      });
+    }
+
+    // Lighting preset selector
+    const lightingSelector =
+      this.ui.controlPanel.querySelector('#lighting-preset');
+    if (lightingSelector) {
+      lightingSelector.addEventListener('change', async e => {
+        await this.setLightingPreset(e.target.value);
+      });
+    }
 
     // Light intensity slider
     const lightIntensitySlider =
@@ -241,12 +465,21 @@ export class ProductViewer extends THREE.EventDispatcher {
       });
     }
 
-    // Material preset selector
-    const materialSelector =
-      this.ui.controlPanel.querySelector('#material-preset');
-    if (materialSelector) {
-      materialSelector.addEventListener('change', e => {
-        this.setMaterialPreset(e.target.value);
+    // Screenshot button
+    const captureBtn = this.ui.controlPanel.querySelector(
+      '#capture-screenshot'
+    );
+    if (captureBtn) {
+      captureBtn.addEventListener('click', () => {
+        this.captureScreenshot();
+      });
+    }
+
+    // Shadow toggle button
+    const shadowsBtn = this.ui.controlPanel.querySelector('#toggle-shadows');
+    if (shadowsBtn) {
+      shadowsBtn.addEventListener('click', () => {
+        this.toggleShadows();
       });
     }
   }
@@ -324,6 +557,13 @@ export class ProductViewer extends THREE.EventDispatcher {
         this.sceneManager.update(this.rendererManager.getDeltaTime());
       }
 
+      // Update lighting animations
+      if (this.lightingManager) {
+        this.lightingManager.updateAnimations(
+          this.rendererManager.getDeltaTime()
+        );
+      }
+
       // Render frame
       if (this.sceneManager && this.cameraManager && this.rendererManager) {
         this.rendererManager.render(
@@ -363,23 +603,8 @@ export class ProductViewer extends THREE.EventDispatcher {
    * @returns {Promise<THREE.Object3D>} Loaded model
    */
   async loadModel(url, options = {}) {
-    // This will be implemented in the next phase
-    // For now, create a simple test cube
     console.log(`ProductViewer: Loading model from ${url}`);
-
-    const geometry = new THREE.BoxGeometry(2, 2, 2);
-    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-    const cube = new THREE.Mesh(geometry, material);
-
-    // Add to scene
-    this.sceneManager.addObject(cube, 'test-model');
-
-    // Frame the object in view
-    await this.cameraManager.frameObject(cube);
-
-    this.dispatchEvent({ type: 'modelLoaded', model: cube });
-
-    return cube;
+    return await this.modelManager.loadModel(url, options);
   }
 
   /**
@@ -416,13 +641,47 @@ export class ProductViewer extends THREE.EventDispatcher {
   }
 
   /**
+   * Set material preset for current model
+   * @param {string} preset - Material preset name
+   */
+  async setMaterialPreset(preset) {
+    if (this.materialManager && this.currentModel) {
+      const success = await this.materialManager.applyMaterialPreset(preset);
+      if (success) {
+        console.log(`ProductViewer: Applied material preset "${preset}"`);
+        this.dispatchEvent({ type: 'materialPresetChange', preset });
+      }
+    } else {
+      console.warn('ProductViewer: No material manager or model available');
+    }
+  }
+
+  /**
+   * Set lighting preset
+   * @param {string} preset - Lighting preset name
+   */
+  async setLightingPreset(preset) {
+    if (this.lightingManager) {
+      const success = await this.lightingManager.applyLightingPreset(preset);
+      if (success) {
+        console.log(`ProductViewer: Applied lighting preset "${preset}"`);
+        this.dispatchEvent({ type: 'lightingPresetChange', preset });
+      }
+    } else {
+      console.warn('ProductViewer: No lighting manager available');
+    }
+  }
+
+  /**
    * Set lighting intensity (placeholder)
    * @param {number} intensity - Light intensity value
    */
   setLightIntensity(intensity) {
-    // This will be implemented when we add the lighting manager
-    console.log(`ProductViewer: Setting light intensity to ${intensity}`);
-    this.dispatchEvent({ type: 'lightIntensityChange', intensity });
+    if (this.lightingManager) {
+      this.lightingManager.setGlobalIntensity(intensity);
+      console.log(`ProductViewer: Set light intensity to ${intensity}`);
+      this.dispatchEvent({ type: 'lightIntensityChange', intensity });
+    }
   }
 
   /**
@@ -433,6 +692,100 @@ export class ProductViewer extends THREE.EventDispatcher {
     // This will be implemented when we add the material manager
     console.log(`ProductViewer: Setting material preset to ${preset}`);
     this.dispatchEvent({ type: 'materialPresetChange', preset });
+  }
+  /**
+   * Toggle shadows on/off
+   */
+  toggleShadows() {
+    if (this.lightingManager) {
+      const currentState = this.lightingManager.shadowsEnabled;
+      this.lightingManager.setShadowsEnabled(!currentState);
+
+      // Update renderer shadow settings
+      this.rendererManager.setShadowsEnabled(!currentState);
+
+      // Update button state
+      const shadowsBtn = this.ui.controlPanel?.querySelector('#toggle-shadows');
+      if (shadowsBtn) {
+        shadowsBtn.classList.toggle('active', !currentState);
+        shadowsBtn.innerHTML = !currentState
+          ? '🌟 Shadows On'
+          : '🌟 Shadows Off';
+      }
+
+      console.log(
+        `ProductViewer: Shadows ${!currentState ? 'enabled' : 'disabled'}`
+      );
+      this.dispatchEvent({ type: 'shadowsToggle', enabled: !currentState });
+    }
+  }
+
+  /**
+   * Capture screenshot of current view
+   * @param {Object} options - Screenshot options
+   */
+  captureScreenshot(options = {}) {
+    if (this.rendererManager) {
+      try {
+        const dataURL = this.rendererManager.captureScreenshot({
+          format: 'image/png',
+          quality: 1.0,
+          ...options,
+        });
+
+        if (dataURL) {
+          // Create download link
+          const link = document.createElement('a');
+          link.download = `3d-model-screenshot-${Date.now()}.png`;
+          link.href = dataURL;
+          link.click();
+
+          console.log('ProductViewer: Screenshot captured and downloaded');
+          this.dispatchEvent({ type: 'screenshotCaptured', dataURL });
+        }
+      } catch (error) {
+        console.error('ProductViewer: Screenshot capture failed:', error);
+        this.handleError('Screenshot failed', error);
+      }
+    }
+  }
+
+  /**
+   * Utility Methods
+   */
+
+  /**
+   * Update loading progress
+   * @param {number} progress - Progress percentage (0-100)
+   * @param {string} message - Loading message
+   */
+  updateLoadingProgress(progress, message = 'Loading...') {
+    const loadingBar = document.getElementById('loading-bar');
+    const loadingText = document.querySelector('.loading-text');
+
+    if (loadingBar) {
+      loadingBar.style.width = `${progress}%`;
+    }
+
+    if (loadingText) {
+      loadingText.textContent = message;
+    }
+  }
+
+  /**
+   * Update model information display
+   * @param {THREE.Object3D} model - Current model
+   */
+  updateModelInfo(model) {
+    if (this.modelManager) {
+      const stats = this.modelManager._getModelStats(model);
+      console.log('Model Statistics:', stats);
+
+      this.dispatchEvent({
+        type: 'modelInfoUpdated',
+        stats,
+      });
+    }
   }
 
   /**
@@ -624,12 +977,35 @@ export class ProductViewer extends THREE.EventDispatcher {
   }
 
   /**
+   * Get enhanced viewer information
+   * @returns {Object} Comprehensive viewer information
+   */
+  getInfo() {
+    return {
+      version: '1.0.0',
+      isInitialized: this.isInitialized,
+      isDisposed: this.isDisposed,
+      isAnimating: this.isAnimating,
+      deviceType: this.deviceType,
+      environment: this.environment,
+      hasCurrentModel: !!this.currentModel,
+      performance: this.getPerformanceStats(),
+      scene: this.sceneManager?.getStats(),
+      camera: this.cameraManager?.getInfo(),
+      renderer: this.rendererManager?.getInfo(),
+      model: this.modelManager?.getInfo(),
+      materials: this.materialManager?.getInfo(),
+      lighting: this.lightingManager?.getInfo(),
+    };
+  }
+
+  /**
    * Clean up and dispose of all resources
    */
   dispose() {
     if (this.isDisposed) return;
 
-    console.log('ProductViewer: Starting cleanup...');
+    console.log('ProductViewer: Starting enhanced cleanup...');
 
     // Stop animation loop
     this.stopAnimationLoop();
@@ -639,13 +1015,35 @@ export class ProductViewer extends THREE.EventDispatcher {
       this.resizeObserver.disconnect();
     }
 
+    // Dispose of file handler
+    if (this.fileDropHandler) {
+      this.fileDropHandler.dispose();
+      this.fileDropHandler = null;
+    }
+
     // Dispose of controls
     if (this.controls) {
       this.controls.dispose();
       this.controls = null;
     }
 
-    // Dispose of managers
+    // Dispose of enhanced managers
+    if (this.lightingManager) {
+      this.lightingManager.dispose();
+      this.lightingManager = null;
+    }
+
+    if (this.materialManager) {
+      this.materialManager.dispose();
+      this.materialManager = null;
+    }
+
+    if (this.modelManager) {
+      this.modelManager.dispose();
+      this.modelManager = null;
+    }
+
+    // Dispose of core managers
     if (this.sceneManager) {
       this.sceneManager.dispose();
       this.sceneManager = null;
@@ -665,29 +1063,11 @@ export class ProductViewer extends THREE.EventDispatcher {
     this.container = null;
     this.config = null;
     this.ui = null;
+    this.currentModel = null;
 
     this.isDisposed = true;
     this.dispatchEvent({ type: 'disposed' });
 
-    console.log('ProductViewer: Cleanup completed');
-  }
-
-  /**
-   * Get viewer information
-   * @returns {Object} Viewer information
-   */
-  getInfo() {
-    return {
-      version: '1.0.0',
-      isInitialized: this.isInitialized,
-      isDisposed: this.isDisposed,
-      isAnimating: this.isAnimating,
-      deviceType: this.deviceType,
-      environment: this.environment,
-      performance: this.getPerformanceStats(),
-      scene: this.sceneManager?.getStats(),
-      camera: this.cameraManager?.getInfo(),
-      renderer: this.rendererManager?.getInfo(),
-    };
+    console.log('ProductViewer: Enhanced cleanup completed');
   }
 }
