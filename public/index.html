@@ -5,269 +5,276 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Enterprise-grade 3D product viewer built with Three.js"
+      content="3D Product Viewer Pro - Interactive 3D product showcase with advanced materials and lighting"
     />
-    <meta name="author" content="3D Product Viewer Pro" />
-
-    <!-- Preconnect to external domains for better performance -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
-    <!-- App icons and manifest -->
-    <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
-    <link rel="icon" type="image/png" href="/assets/icons/favicon.png" />
-    <link rel="manifest" href="/manifest.json" />
-
-    <!-- Theme color for mobile browsers -->
-    <meta name="theme-color" content="#1a1a1a" />
-
-    <!-- Open Graph meta tags for social sharing -->
-    <meta property="og:title" content="3D Product Viewer Pro" />
-    <meta
-      property="og:description"
-      content="Interactive 3D product visualization with advanced features"
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="/assets/images/og-image.jpg" />
-
-    <!-- Fonts -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-
-    <title>3D Product Viewer Pro</title>
-
-    <!-- Critical CSS for preventing layout shift -->
-    <style>
-      /* Critical styles to prevent FOUC (Flash of Unstyled Content) */
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
-      html {
-        font-family:
-          'Inter',
-          -apple-system,
-          BlinkMacSystemFont,
-          'Segoe UI',
-          sans-serif;
-        font-size: 16px;
-        line-height: 1.5;
-      }
-
-      body {
-        background-color: #0a0a0a;
-        color: #ffffff;
-        overflow: hidden;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-
-      #app {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .loading-screen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        transition: opacity 0.5s ease-out;
-      }
-
-      .loading-screen.hidden {
-        opacity: 0;
-        pointer-events: none;
-      }
-
-      .loading-spinner {
-        width: 60px;
-        height: 60px;
-        border: 3px solid rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        border-top: 3px solid #007acc;
-        animation: spin 1s linear infinite;
-        margin-bottom: 20px;
-      }
-
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-
-      .loading-text {
-        color: #ffffff;
-        font-size: 18px;
-        font-weight: 500;
-        margin-bottom: 10px;
-      }
-
-      .loading-progress {
-        color: #999999;
-        font-size: 14px;
-      }
-
-      .error-screen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: #1a1a1a;
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        padding: 40px;
-        text-align: center;
-      }
-
-      .error-screen.visible {
-        display: flex;
-      }
-
-      .error-icon {
-        font-size: 48px;
-        color: #ff4444;
-        margin-bottom: 20px;
-      }
-
-      .error-title {
-        font-size: 24px;
-        font-weight: 600;
-        color: #ffffff;
-        margin-bottom: 12px;
-      }
-
-      .error-message {
-        font-size: 16px;
-        color: #cccccc;
-        max-width: 500px;
-        line-height: 1.6;
-        margin-bottom: 30px;
-      }
-
-      .error-actions {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-
-      .btn {
-        padding: 12px 24px;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .btn-primary {
-        background-color: #007acc;
-        color: #ffffff;
-      }
-
-      .btn-primary:hover {
-        background-color: #0066aa;
-        transform: translateY(-1px);
-      }
-
-      .btn-secondary {
-        background-color: transparent;
-        color: #cccccc;
-        border: 1px solid #444444;
-      }
-
-      .btn-secondary:hover {
-        background-color: #333333;
-        border-color: #555555;
-      }
-    </style>
+    <title>3D Product Viewer Pro - Enhanced Materials & Lighting</title>
+    <link rel="stylesheet" href="src/styles/main.css" />
   </head>
-
   <body>
-    <!-- Main application container -->
-    <div id="app">
-      <!-- Loading screen -->
-      <div class="loading-screen" id="loadingScreen">
+    <!-- Main 3D Viewer Container -->
+    <div id="viewer-container" class="viewer-container">
+      <!-- 3D Canvas will be injected here -->
+      <canvas id="viewer-canvas" class="viewer-canvas"></canvas>
+
+      <!-- Enhanced Loading Overlay -->
+      <div id="loading-overlay" class="loading-overlay">
         <div class="loading-spinner"></div>
-        <div class="loading-text">Loading 3D Viewer</div>
-        <div class="loading-progress" id="loadingProgress">Initializing...</div>
+        <div class="loading-text">Loading 3D Model...</div>
+        <div class="loading-progress">
+          <div id="loading-bar" class="loading-bar"></div>
+        </div>
+        <div class="loading-stage">Initializing...</div>
       </div>
 
-      <!-- Error screen -->
-      <div class="error-screen" id="errorScreen">
-        <div class="error-icon">⚠️</div>
-        <h1 class="error-title">Something went wrong</h1>
-        <p class="error-message" id="errorMessage">
-          We encountered an error while loading the 3D viewer. This might be due
-          to an unsupported browser or WebGL issues.
-        </p>
-        <div class="error-actions">
-          <button class="btn btn-primary" onclick="window.location.reload()">
-            🔄 Retry
-          </button>
-          <a
-            href="https://get.webgl.org/"
-            class="btn btn-secondary"
-            target="_blank"
-          >
-            ℹ️ Check WebGL Support
-          </a>
+      <!-- Error Display -->
+      <div id="error-overlay" class="error-overlay hidden">
+        <div class="error-content">
+          <h3>Loading Error</h3>
+          <p id="error-message">Failed to load 3D model</p>
+          <button id="retry-button" class="retry-button">Retry</button>
+          <button id="close-error" class="close-button">Close</button>
         </div>
       </div>
 
-      <!-- 3D Viewer will be mounted here -->
-      <div id="viewer-container"></div>
+      <!-- Enhanced Control Panel -->
+      <div id="control-panel" class="control-panel">
+        <!-- Model Controls Section -->
+        <div class="control-section">
+          <h4>🎮 Model Controls</h4>
+          <div class="button-group">
+            <button id="auto-rotate-toggle" class="control-button">
+              Auto Rotate
+            </button>
+            <button id="reset-camera" class="control-button">Reset View</button>
+            <button id="show-file-drop" class="control-button">
+              📁 Upload Model
+            </button>
+          </div>
+        </div>
 
-      <!-- UI Controls Container -->
-      <div id="ui-container"></div>
+        <!-- Materials Section -->
+        <div class="control-section">
+          <h4>🎨 Materials</h4>
+          <select id="material-preset" class="preset-selector">
+            <option value="default">Default</option>
+            <option value="metallic">Metallic</option>
+            <option value="matte">Matte</option>
+            <option value="glossy">Glossy</option>
+            <option value="glass">Glass</option>
+            <option value="plastic">Plastic</option>
+            <option value="ceramic">Ceramic</option>
+            <option value="carbon_fiber">Carbon Fiber</option>
+          </select>
+          <div class="preset-description" id="material-description">
+            Standard material with balanced properties
+          </div>
+        </div>
+
+        <!-- Lighting Section -->
+        <div class="control-section">
+          <h4>💡 Lighting</h4>
+          <select id="lighting-preset" class="preset-selector">
+            <option value="studio">Studio</option>
+            <option value="outdoor">Outdoor</option>
+            <option value="dramatic">Dramatic</option>
+            <option value="soft">Soft</option>
+            <option value="night">Night</option>
+          </select>
+          <div class="preset-description" id="lighting-description">
+            Professional studio setup with key, fill, and rim lights
+          </div>
+
+          <div class="slider-container">
+            <label for="light-intensity">Intensity</label>
+            <input
+              type="range"
+              id="light-intensity"
+              class="slider"
+              min="0"
+              max="2"
+              step="0.1"
+              value="1"
+            />
+            <span class="slider-value" id="intensity-value">1.0</span>
+          </div>
+        </div>
+
+        <!-- Rendering Section -->
+        <div class="control-section">
+          <h4>⚡ Rendering</h4>
+          <div class="button-group">
+            <button id="toggle-shadows" class="control-button active">
+              🌟 Shadows On
+            </button>
+            <button id="capture-screenshot" class="control-button">
+              📸 Screenshot
+            </button>
+          </div>
+
+          <div class="render-quality">
+            <label for="render-quality">Quality</label>
+            <select id="render-quality" class="preset-selector">
+              <option value="high">High Quality</option>
+              <option value="medium">Medium Quality</option>
+              <option value="low">Performance Mode</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Advanced Section (Collapsible) -->
+        <div class="control-section">
+          <h4 class="collapsible" id="advanced-toggle">🔧 Advanced Settings</h4>
+          <div class="collapsible-content" id="advanced-content">
+            <div class="advanced-controls">
+              <div class="checkbox-group">
+                <label>
+                  <input type="checkbox" id="enable-wireframe" /> Wireframe Mode
+                </label>
+                <label>
+                  <input type="checkbox" id="enable-helpers" /> Show Helpers
+                </label>
+                <label>
+                  <input type="checkbox" id="enable-stats" checked />
+                  Performance Stats
+                </label>
+              </div>
+
+              <div class="slider-container">
+                <label for="camera-fov">Camera FOV</label>
+                <input
+                  type="range"
+                  id="camera-fov"
+                  class="slider"
+                  min="20"
+                  max="120"
+                  step="5"
+                  value="45"
+                />
+                <span class="slider-value" id="fov-value">45°</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced Performance Stats -->
+      <div id="performance-stats" class="performance-stats">
+        <div class="stats-header">Performance Monitor</div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">FPS:</span>
+            <span class="stat-value" id="fps-counter">--</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Memory:</span>
+            <span class="stat-value" id="memory-usage">--</span>MB
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Triangles:</span>
+            <span class="stat-value" id="triangle-count">--</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Draw Calls:</span>
+            <span class="stat-value" id="draw-calls">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Model Information Panel -->
+      <div id="model-info" class="model-info hidden">
+        <div class="info-header">
+          <h4>📊 Model Information</h4>
+          <button class="close-btn" id="close-model-info">×</button>
+        </div>
+        <div class="info-content">
+          <div class="info-item">
+            <span class="info-label">File Name:</span>
+            <span class="info-value" id="model-filename">--</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">File Size:</span>
+            <span class="info-value" id="model-filesize">--</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Meshes:</span>
+            <span class="info-value" id="model-meshes">--</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Materials:</span>
+            <span class="info-value" id="model-materials">--</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Vertices:</span>
+            <span class="info-value" id="model-vertices">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions Floating Menu -->
+      <div id="quick-actions" class="quick-actions">
+        <button class="quick-action-btn" id="quick-reset" title="Reset View">
+          🔄
+        </button>
+        <button
+          class="quick-action-btn"
+          id="quick-rotate"
+          title="Toggle Auto Rotate"
+        >
+          🔄
+        </button>
+        <button class="quick-action-btn" id="quick-info" title="Model Info">
+          ℹ️
+        </button>
+        <button
+          class="quick-action-btn"
+          id="quick-fullscreen"
+          title="Fullscreen"
+        >
+          🔳
+        </button>
+      </div>
+
+      <!-- Toast Notifications -->
+      <div id="toast-container" class="toast-container"></div>
     </div>
 
-    <!-- Main application script -->
-    <script type="module" src="/src/main.js"></script>
+    <!-- Version Info -->
+    <div class="version-info">
+      3D Product Viewer Pro v1.3.0 - Enhanced Materials & Lighting
+    </div>
 
-    <!-- Fallback for browsers without module support -->
-    <script nomodule>
-      document.getElementById('errorScreen').style.display = 'flex';
-      document.getElementById('errorMessage').textContent =
-        'Your browser does not support modern JavaScript modules. Please update your browser to use this application.';
-      document.getElementById('loadingScreen').style.display = 'none';
-    </script>
+    <!-- Keyboard Shortcuts Help -->
+    <div id="shortcuts-help" class="shortcuts-help hidden">
+      <div class="shortcuts-content">
+        <h3>⌨️ Keyboard Shortcuts</h3>
+        <div class="shortcuts-list">
+          <div class="shortcut-item">
+            <kbd>R</kbd> <span>Reset Camera</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>Space</kbd> <span>Toggle Auto Rotate</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>S</kbd> <span>Take Screenshot</span>
+          </div>
+          <div class="shortcut-item"><kbd>F</kbd> <span>Fullscreen</span></div>
+          <div class="shortcut-item">
+            <kbd>H</kbd> <span>Toggle Helpers</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>1-5</kbd> <span>Material Presets</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>Shift + 1-5</kbd> <span>Lighting Presets</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>?</kbd> <span>Show/Hide This Help</span>
+          </div>
+        </div>
+        <button class="close-shortcuts">Close</button>
+      </div>
+    </div>
 
-    <!-- Service Worker registration -->
-    <script>
-      // Register service worker for offline support (production only)
-      if ('serviceWorker' in navigator && location.protocol === 'https:') {
-        navigator.serviceWorker.register('/sw.js').catch(console.warn);
-      }
-    </script>
+    <script type="module" src="src/main.js"></script>
   </body>
 </html>
